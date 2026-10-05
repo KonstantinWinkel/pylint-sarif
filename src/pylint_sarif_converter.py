@@ -2,60 +2,45 @@
 
 """This File contains the class definitions for the converter"""
 
-import argparse
-import json
 import logging
-import subprocess
-import sys
-
 from copy import deepcopy
+from importlib.metadata import PackageNotFoundError, version
 
+from src.file_io import load_json, load_template, save_json_atomically, validate_input_output_paths
 from src.paths import SARIF_TEMPLATE_PATH, RULE_TEMPLATE_PATH, ARTEFACT_TEMPLATE_PATH, RESULT_TEMPLATE_PATH
-from src.pylint_types import PylintMessage, pylint_confidence_from_string, PYLINT_MESSAGE_KEYS
+from src.pylint_types import PylintMessage, pylint_confidence_from_string
+from src.pylint_validation import validate_message
 from src.sarif_types import SarifSeverity, sarif_severity_to_string
 
 logger = logging.getLogger(__name__)
 
 class PylintSarifConverter:
     """This class handles the conversion from pylint json to sarif"""
-    def __init__(self):
 
-        # parser setup
-        parser = argparse.ArgumentParser()
-
-        parser.add_argument("-v", "--verbose", action="count", default=0,
-                            help="Increase verbosity (-v, -vv, -vvv)")
-        parser.add_argument("-i", "--input", type=str, required=True,
-                            help="Path to the input json file")
-        parser.add_argument("-o", "--output", type=str, required=True,
-                            help="Path to the output sarif file")
-
-        self.args = parser.parse_args()
-
-        # logging setup
-        logging_levels = { 0: logging.WARNING,
-                           1: logging.INFO,
-                           2: logging.DEBUG
-                         }
-
-        logging.basicConfig(level=logging_levels.get(self.args.verbose, logging.DEBUG),
-                            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
-
-        # internal variables
+    def __init__(self, args):
+        self.args = args
         self.json_content = []
         self.sarif_content = {}
+        self.max_input_size_bytes = self.args.max_input_size * 1024 * 1024
+        self.max_output_size_bytes = self.args.max_output_size * 1024 * 1024
+        self.max_messages = self.args.max_messages
+        self.max_rules = self.args.max_rules
+        self.max_artifacts = self.args.max_artifacts
 
     def run(self) -> None:
         """This method runs the whole conversion algorithm"""
+
+        # reject input/output aliases before reading or writing either path
+        validate_input_output_paths(self.args.input, self.args.output)
 
         # load pylint json file
         self.load_json_file(self.args.input)
 
         # load templates
-        sarif_template = self.load_template(str(SARIF_TEMPLATE_PATH))
-        rule_template = self.load_template(str(RULE_TEMPLATE_PATH))
-        result_template = self.load_template(str(RESULT_TEMPLATE_PATH))
-        artefact_template = self.load_template(str(ARTEFACT_TEMPLATE_PATH))
+        sarif_template = load_template(str(SARIF_TEMPLATE_PATH))
+        rule_template = load_template(str(RULE_TEMPLATE_PATH))
+        result_template = load_template(str(RESULT_TEMPLATE_PATH))
+        artefact_template = load_template(str(ARTEFACT_TEMPLATE_PATH))
 
         # build parts
         rules = self._get_sarif_rule_definitions(rule_template)
@@ -68,7 +53,6 @@ class PylintSarifConverter:
 
         # safe sarif file
         self.save_sarif_file(self.args.output)
-
 
     def _get_sarif_severity_from_message_id(self, message_id: str) -> SarifSeverity:
         """
@@ -98,12 +82,12 @@ class PylintSarifConverter:
         """
 
         conversion_dict = {
-                'failure':     SarifSeverity.ERROR,
-                'error':       SarifSeverity.ERROR,
-                'warning':     SarifSeverity.WARNING,
-                'convention':  SarifSeverity.NOTE,
-                'refactor':    SarifSeverity.NOTE,
-                'information': SarifSeverity.NOTE,
+                'fatal':      SarifSeverity.ERROR,
+                'error':      SarifSeverity.ERROR,
+                'warning':    SarifSeverity.WARNING,
+                'convention': SarifSeverity.NOTE,
+                'refactor':   SarifSeverity.NOTE,
+                'info':       SarifSeverity.NOTE,
                 }
 
         if pylint_type not in conversion_dict:
@@ -123,7 +107,8 @@ class PylintSarifConverter:
         for message in self.json_content:
             if message.message_id in rules_dict:
                 continue
-
+            if len(rules_dict) >= self.max_rules:
+                raise ValueError(f"Pylint report exceeds the {self.max_rules}-rule limit")
             template_copy = deepcopy(rule_template)
 
             template_copy["id"] = message.message_id
@@ -138,7 +123,6 @@ class PylintSarifConverter:
         rules = []
         for _, rule in rules_dict.items():
             rules.append(rule)
-
 
         return rules
 
@@ -189,15 +173,15 @@ class PylintSarifConverter:
         return results
 
     def _get_sarif_artifact_definitions(self, artefact_template: dict) -> list:
-        """
-        This method builds the artefact definitions for the final SARIF file
-        """
+        """This method builds the artefact definitions for the final SARIF file"""
 
         artefact_dict = {}
 
         for message in self.json_content:
             if message.path in artefact_dict:
                 continue
+            if len(artefact_dict) >= self.max_artifacts:
+                raise ValueError(f"Pylint report exceeds the {self.max_artifacts}-artifact limit")
 
             template_copy = deepcopy(artefact_template)
 
@@ -213,17 +197,15 @@ class PylintSarifConverter:
         return artefacts
 
     def _get_pylint_version(self) -> str:
-        """calls pylint --version and extracts the pylint version"""
-
-        output = subprocess.run(["pylint", "--version"], capture_output=True, check=False)
-        lines = output.stdout.splitlines()
-        return str(lines[0][7:].decode('utf-8'))
+        """Returns the installed Pylint package version without executing an external command."""
+        try:
+            return version("pylint")
+        except PackageNotFoundError:
+            logger.warning("Unable to determine Pylint version: package metadata is unavailable")
+            return "unknown"
 
     def _build_sarif_file(self, sarif_template: dict, rules: list, results: list, artifacts: list) -> None:
-        """
-        This method builds the final sarif file using a given template and
-        the results of the previous steps, i.e. list of rules, results and artifacts
-        """
+        """This method builds the final sarif file using the generated definitions."""
 
         self.sarif_content = deepcopy(sarif_template)
 
@@ -232,63 +214,32 @@ class PylintSarifConverter:
         self.sarif_content["runs"][0]["artifacts"] = artifacts
         self.sarif_content["runs"][0]["results"] = results
 
-    def load_json_file(self, path:str) -> None:
-        """This method loads the json content"""
+    def load_json_file(self, path: str) -> None:
+        """This method loads and validates the json content"""
 
-        file_content = None
+        file_content = load_json(path, self.max_input_size_bytes)
 
-        with open(path, 'r', encoding='utf-8') as f:
-            file_content = json.load(f)
+        if not isinstance(file_content, dict):
+            raise ValueError("Pylint report must be a JSON object")
+        if "messages" not in file_content:
+            raise ValueError("Pylint report is missing required 'messages' array")
+        messages = file_content["messages"]
+        if not isinstance(messages, list):
+            raise ValueError("Pylint report 'messages' must be an array")
+        if len(messages) > self.max_messages:
+            raise ValueError(f"Pylint report exceeds the {self.max_messages}-message limit")
 
-        if file_content is None:
-            logging.error("Unable to read JSON file %s", path)
-            sys.exit()
+        validated_messages = []
+        for message_index, message in enumerate(messages):
+            validate_message(message, message_index)
+            validated_messages.append(PylintMessage(
+                message['type'], message['symbol'], message['message'], message['messageId'],
+                pylint_confidence_from_string(message['confidence']), message['module'], message['obj'],
+                message['line'], message['column'], message['endLine'], message['endColumn'],
+                message['path'], message['absolutePath']))
+        self.json_content = validated_messages
 
-        for message in file_content['messages']:
+    def save_sarif_file(self, path: str) -> None:
+        """Atomically publish a complete SARIF file without overwriting an existing entry."""
 
-            all_keys_available = True
-            for key in PYLINT_MESSAGE_KEYS:
-                if key not in message.keys():
-                    all_keys_available = False
-                    logger.warning("Skipping message with missing key %s: %s", key, message)
-                    break
-
-            if all_keys_available is False:
-                continue
-
-            pylint_message = PylintMessage(message['type'],
-                                           message['symbol'],
-                                           message['message'],
-                                           message['messageId'],
-                                           pylint_confidence_from_string(message['confidence']),
-                                           message['module'],
-                                           message['obj'],
-                                           message['line'],
-                                           message['column'],
-                                           message['endLine'],
-                                           message['endColumn'],
-                                           message['path'],
-                                           message['absolutePath']
-                                           )
-
-            self.json_content.append(pylint_message)
-
-    def load_template(self, path: str) -> dict:
-        """This method is used to load the template json files"""
-
-        file_content = None
-
-        with open(path, 'r', encoding='utf-8') as f:
-            file_content = json.load(f)
-
-        if file_content is None:
-            logging.error("Unable to read JSON file %s", path)
-            sys.exit()
-
-        return file_content
-
-    def save_sarif_file(self, path:str) -> None:
-        """This method saves the result list as a SARIF file"""
-
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(self.sarif_content, f, ensure_ascii=False, indent=4)
+        save_json_atomically(self.sarif_content, path, self.max_output_size_bytes)
