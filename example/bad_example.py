@@ -1,4 +1,4 @@
-#Author: Konstantin M.J. Winkel
+# Author: Konstantin M.J. Winkel
 
 def method_without_docstring() -> int:
 

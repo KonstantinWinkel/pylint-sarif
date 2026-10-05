@@ -32,7 +32,7 @@ def pylint_confidence_from_string(string: str) -> PylintConfidence:
                         }
 
     if string not in conversion_dict:
-        logger.warning("Unkown Pylint Condifence string %s, defaulting to UNDEFINED")
+        logger.warning("Unkown Pylint Condifence string %s, defaulting to UNDEFINED", string)
         return PylintConfidence.UNDEFINED
 
     return conversion_dict[string]

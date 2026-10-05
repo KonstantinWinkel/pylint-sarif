@@ -136,8 +136,9 @@ class PylintSarifConverter:
             rules_dict[message.message_id] = template_copy
 
         rules = []
-        for rule_key in rules_dict:
-            rules.append(rules_dict[rule_key])
+        for _, rule in rules_dict.items():
+            rules.append(rule)
+
 
         return rules
 
@@ -206,8 +207,8 @@ class PylintSarifConverter:
 
         artefacts = []
 
-        for artefact_key in artefact_dict:
-            artefacts.append(artefact_dict[artefact_key])
+        for _, artefact in artefact_dict.items():
+            artefacts.append(artefact)
 
         return artefacts
 
