@@ -6,11 +6,11 @@ import logging
 from copy import deepcopy
 from importlib.metadata import PackageNotFoundError, version
 
-from src.file_io import load_json, load_template, save_json_atomically, validate_input_output_paths
-from src.paths import SARIF_TEMPLATE_PATH, RULE_TEMPLATE_PATH, ARTEFACT_TEMPLATE_PATH, RESULT_TEMPLATE_PATH
-from src.pylint_types import PylintMessage, pylint_confidence_from_string
-from src.pylint_validation import validate_message
-from src.sarif_types import SarifSeverity, sarif_severity_to_string
+from .file_io import load_json, load_template, save_json_atomically, validate_input_output_paths
+from .paths import SARIF_TEMPLATE_PATH, RULE_TEMPLATE_PATH, ARTEFACT_TEMPLATE_PATH, RESULT_TEMPLATE_PATH
+from .pylint_types import PylintMessage, pylint_confidence_from_string
+from .pylint_validation import validate_message
+from .sarif_types import SarifSeverity, sarif_severity_to_string
 
 logger = logging.getLogger(__name__)
 

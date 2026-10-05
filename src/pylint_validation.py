@@ -4,7 +4,7 @@
 
 import re
 
-from src.pylint_types import PYLINT_MESSAGE_KEYS
+from .pylint_types import PYLINT_MESSAGE_KEYS
 
 MAX_STRING_LENGTH = 1_000_000
 

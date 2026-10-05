@@ -6,17 +6,24 @@ import json
 import logging
 import sys
 
-from src.cli import configure_logging, parse_arguments
-from src.pylint_sarif_converter import PylintSarifConverter
+from . import convert
+from .cli import configure_logging, parse_arguments
 
 
 def main() -> int:
-    """Main Entry Point"""
+    """Run the converter from command-line arguments."""
     try:
         args = parse_arguments()
         configure_logging(args.verbose)
-        converter = PylintSarifConverter(args)
-        converter.run()
+        convert(
+            args.input,
+            args.output,
+            max_input_size_mib=args.max_input_size,
+            max_output_size_mib=args.max_output_size,
+            max_messages=args.max_messages,
+            max_rules=args.max_rules,
+            max_artifacts=args.max_artifacts,
+        )
     except (FileExistsError, json.JSONDecodeError, OSError, TypeError, ValueError) as exc:
         logging.getLogger(__name__).error("Conversion failed: %s", exc)
         return 1
