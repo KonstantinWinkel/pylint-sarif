@@ -1,9 +1,11 @@
-# Author: Konstantin M.J. Winkel
+# Author: Konstantin M.J. Winkel, M.Sc.
 
 """Command-line parsing and logging configuration for the converter."""
 
 import argparse
 import logging
+
+from pathlib import Path
 
 DEFAULT_MAX_INPUT_SIZE_MIB = 50
 DEFAULT_MAX_OUTPUT_SIZE_MIB = 250
@@ -26,25 +28,25 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="Increase verbosity (-v, -vv, -vvv)")
-    parser.add_argument("-i", "--input", type=str, required=True,
+    parser.add_argument("-i", "--input", type=Path, required=True,
                         help="Path to the input json file")
-    parser.add_argument("-o", "--output", type=str, required=True,
+    parser.add_argument("-o", "--output", type=Path, required=True,
                         help="Path to the output sarif file")
     parser.add_argument("--max-input-size", type=positive_integer,
                         default=DEFAULT_MAX_INPUT_SIZE_MIB,
-                        help="the maximum size of the input json file, in megabyte")
+                        help="The maximum size of the input json file, in megabyte")
     parser.add_argument("--max-output-size", type=positive_integer,
                         default=DEFAULT_MAX_OUTPUT_SIZE_MIB,
-                        help="the maximum size of the output sarif file, in megabyte")
+                        help="The maximum size of the output sarif file, in megabyte")
     parser.add_argument("--max-messages", type=positive_integer,
                         default=DEFAULT_MAX_MESSAGES,
-                        help="Maximum number of Pylint messages to process")
+                        help="The maximum number of Pylint messages to process")
     parser.add_argument("--max-rules", type=positive_integer,
                         default=DEFAULT_MAX_RULES,
-                        help="Maximum number of unique Pylint rules to process")
+                        help="The maximum number of unique Pylint rules to process")
     parser.add_argument("--max-artifacts", type=positive_integer,
                         default=DEFAULT_MAX_ARTIFACTS,
-                        help="Maximum number of unique artifacts to process")
+                        help="The maximum number of unique artifacts to process")
 
     return parser.parse_args()
 

@@ -1,4 +1,4 @@
-# Author: Konstantin M.J. Winkel
+# Author: Konstantin M.J. Winkel, M.Sc.
 
 """This File contains the class definitions for the converter"""
 

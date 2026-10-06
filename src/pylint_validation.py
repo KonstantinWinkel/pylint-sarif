@@ -1,4 +1,4 @@
-# Author: Konstantin M.J. Winkel
+# Author: Konstantin M.J. Winkel, M.Sc.
 
 """Validation rules for Pylint json2 messages."""
 

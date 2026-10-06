@@ -1,4 +1,4 @@
-# Author: Konstantin M.J. Winkel
+# Author: Konstantin M.J. Winkel, M.Sc.
 
 """Public API for the Pylint JSON2 to SARIF converter."""
 
@@ -31,6 +31,7 @@ def convert(
     The output path must not already exist. Conversion and validation errors are
     raised to the caller so an embedding application can handle them directly.
     """
+
     limits = {
         "max_input_size_mib": max_input_size_mib,
         "max_output_size_mib": max_output_size_mib,

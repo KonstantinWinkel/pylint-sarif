@@ -1,2 +1,5 @@
 example/__pycache__
+example/output.json
+example/output.sarif
 src/__pycache__
+__pycache__

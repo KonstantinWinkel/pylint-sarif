@@ -1,4 +1,4 @@
-# Author: Konstantin M.J. Winkel
+# Author: Konstantin M.J. Winkel, M.Sc.
 
 """File loading, path validation, and atomic SARIF output helpers."""
 
