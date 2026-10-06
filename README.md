@@ -1,6 +1,6 @@
 Author: Konstantin M.J. Winkel, M.Sc.
 
-# pylint-sarif
+# pylint_sarif
 
 This projects presents a simple and easy to use python implementation of a converter that creates SARIF files from pylint's json2 format. It was created as a replacement for [this reporisory](https://github.com/GrammaTech/pylint-sarif). 
 
@@ -8,8 +8,8 @@ This projects presents a simple and easy to use python implementation of a conve
 To clone and setup this repository run the following commands.
 
 ```bash
-git clone https://github.com/KonstantinWinkel/pylint-sarif.git
-cd pylint-sarif
+git clone https://github.com/KonstantinWinkel/pylint_sarif.git
+cd pylint_sarif
 ./project_utils.sh setup
 ```
 
