@@ -10,6 +10,7 @@ To clone and setup this repository run the following commands.
 ```bash
 git clone https://github.com/KonstantinWinkel/pylint_sarif.git
 cd pylint_sarif
+git submodule update --init shell_utils
 ./project_utils.sh setup
 ```
 
